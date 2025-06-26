@@ -9,6 +9,7 @@ import zipfile
 from PIL import Image
 from collections import Counter
 
+
 def zip_files(folder_path, zip_path):
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for filename in os.listdir(folder_path):
@@ -70,8 +71,11 @@ if argc == 3:
     output_zip = sys.argv[2]
 elif argc != 1:
     print("Usage: stocatima [db output]")
-    exit(1)
+    sys.exit(1)
 
+if not os.path.isfile(db_file):
+    print(f"No db found: {db_file}")
+    sys.exit(1)
 
 # Подключение к базе данных
 conn = sqlite3.connect(db_file)  
@@ -82,16 +86,19 @@ collection_base = "/users/%/loyalty-cards/"
 content_type = "application/x.stocard.loyaltycard+json"
 output_folder = f"{tempfile.gettempdir()}/stocatima"
 
-
-cursor.execute("""
-    SELECT collection,id,content FROM synced_resources
-    WHERE collection LIKE ? AND content_type = ?
-""", (collection_base, content_type))
+try:
+    cursor.execute("""
+        SELECT collection,id,content FROM synced_resources
+        WHERE collection LIKE ? AND content_type = ?
+    """, (collection_base, content_type))
+except:
+    print(f"db error: {db_file}")
+    sys.exit(1)
 
 rows = cursor.fetchall()
 if not rows:
     print("Не найдены loyalty card записи")
-    exit(1)
+    sys.exit(1)
 
 processed_providers = set()  # Уже обработанные карты
 provider_counter = 1  # Счётчик ID для записей
@@ -110,7 +117,7 @@ with open(f"{output_folder}/catima.csv", "w", encoding="utf-8") as txt_file:
     # Обрабатываем каждую карточку
     for row in rows:
         try:
-            user_id = row[0].split("/")[1]
+            user_id = row[0].split("/")[2]            
             loyalty_card_id = row[1]
             loyalty_card_json = json.loads(row[2])
         except json.JSONDecodeError:
@@ -182,7 +189,9 @@ with open(f"{output_folder}/catima.csv", "w", encoding="utf-8") as txt_file:
             SELECT id,content FROM synced_resources
             WHERE collection LIKE ?
         """, (back_collection_like,))
-         
+
+        print(f"SELECT id,content FROM synced_resources WHERE collection LIKE {back_collection_like}")
+        
         images = cursor.fetchall()
         for img in images:            
             img_id = img[0]
