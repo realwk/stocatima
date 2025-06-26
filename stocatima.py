@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 import sys
-import numpy as np
 import zipfile
 
 from PIL import Image
@@ -48,19 +47,6 @@ def get_dominant_color_int(image_path):
         argb_hex -= 0x100000000
 
     return argb_hex
-
-def average_color(image_path):
-    img = Image.open(image_path).convert("RGBA")
-    img_array = np.array(img)
-
-    # Фильтруем прозрачные пиксели
-    non_transparent = img_array[img_array[:, :, 3] > 0]
-
-    if len(non_transparent) == 0:
-        return None
-
-    avg = np.mean(non_transparent[:, :3], axis=0).astype(int)
-    return tuple(avg)
 
 
 db_file = 'sync_db.sqlite'
@@ -189,9 +175,7 @@ with open(f"{output_folder}/catima.csv", "w", encoding="utf-8") as txt_file:
             SELECT id,content FROM synced_resources
             WHERE collection LIKE ?
         """, (back_collection_like,))
-
-        print(f"SELECT id,content FROM synced_resources WHERE collection LIKE {back_collection_like}")
-        
+               
         images = cursor.fetchall()
         for img in images:            
             img_id = img[0]
